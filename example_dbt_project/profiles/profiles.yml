@@ -1,12 +1,21 @@
-test_profile:
+dbt_pipeline:
   target: dev
   outputs:
     dev:
-      type: postgres
-      host: postgres-sakila
-      user: postgres
-      password: postgres
-      port: 5433
-      dbname: postgres
-      schema: public
-      threads: 1
+      type: mysql
+      server: [server/host]
+      port: [port]  # optional
+      database: [schema] # optional, should be same as schema
+      schema: [schema]
+      username: [username]
+      password: [password]
+      driver: MySQL ODBC 8.0 ANSI Driver
+    prod:
+      type: mysql
+      server: [server/host]
+      port: [port]  # optional
+      database: [schema] # optional, should be same as schema
+      schema: [schema]
+      username: [username]
+      password: [password]
+      driver: MySQL ODBC 8.0 ANSI Driver

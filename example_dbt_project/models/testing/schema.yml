@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: source_db
+    database: test_db
+    schema: test_db
+    tables:
+      - name: users
