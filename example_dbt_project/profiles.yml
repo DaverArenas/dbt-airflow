@@ -3,8 +3,8 @@ dbt_pipeline:
   outputs:
     dev:
       type: mysql
-      server: localhost
-      port: 3307
+      host: mysql-db
+      port: 3306
       database: test_db
       schema: test_db
       username: root
@@ -12,8 +12,8 @@ dbt_pipeline:
       driver: MySQL ODBC 8.0 ANSI Driver
     prod:
       type: mysql
-      server: localhost
-      port: 3307
+      host: mysql-db
+      port: 3306
       database: test_db
       schema: test_db
       username: root

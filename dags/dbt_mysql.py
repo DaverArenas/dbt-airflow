@@ -20,15 +20,21 @@ with DAG(
 ) as dag:
 
     # Task to run dbt debug
+    dbt_cd = BashOperator(
+        task_id='dbt_cd',
+        bash_command='cd /opt/airflow/example_dbt_project/',
+    )
+
+    # Task to run dbt debug
     dbt_debug = BashOperator(
         task_id='dbt_debug',
-        bash_command='dbt debug --profiles-dir /opt/airflow/example_dbt_project',
+        bash_command='dbt debug --project-dir /opt/airflow/example_dbt_project --profiles-dir /opt/airflow/example_dbt_project --debug',
     )
 
     # Task to run dbt run
     dbt_run = BashOperator(
         task_id='dbt_run',
-        bash_command='dbt run --profiles-dir /opt/airflow/example_dbt_project',
+        bash_command='dbt run --project-dir /opt/airflow/example_dbt_project --profiles-dir /opt/airflow/example_dbt_project --debug',
     )
 
-    dbt_debug >> dbt_run
+    dbt_cd >> dbt_debug >> dbt_run

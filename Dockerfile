@@ -11,15 +11,19 @@ RUN echo 'Acquire::https::Verify-Peer "false";' > /etc/apt/apt.conf.d/99disable-
 RUN sudo apt-get update \
     && apt-get install -y --no-install-recommends \
     gcc \
+    git-all \
     python3-distutils \
     python3.8-dev
 
 USER airflow
 
-COPY . .
+##COPY . .
+COPY --chown=airflow . .
 
 RUN python -m pip install .
 
+RUN pip install dbt-mysql
 RUN pip install --upgrade dbt-postgres==1.5.9
+
 
 #RUN dbt deps --project-dir /opt/airflow/example_dbt_project
