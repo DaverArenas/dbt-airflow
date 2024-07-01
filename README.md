@@ -1,6 +1,8 @@
-## Caixa bank - LLM translator
+# Caixa bank - LLM translator
 
-# dbt-airflow testing environment
+## dbt-airflow testing environment
+
+This environment is intended to test 
 A Python package that helps Data and Analytics engineers render dbt projects in Apache Airflow DAGs such that
 models, seeds, snapshots and tests are represented by individual Airflow Task.
 
