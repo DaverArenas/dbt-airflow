@@ -1,10 +1,6 @@
-![deploy](https://github.com/gmyrianthous/dbt-airflow/actions/workflows/deploy.yml/badge.svg?branch=main)
-![docs](https://github.com/gmyrianthous/dbt-airflow/actions/workflows/docs.yml/badge.svg?branch=main)
-![main](https://github.com/gmyrianthous/dbt-airflow/actions/workflows/main.yml/badge.svg?branch=main)
-![validate_pull_request](https://github.com/gmyrianthous/dbt-airflow/actions/workflows/validate_pull_request.yml/badge.svg?branch=main)
-[![Downloads](https://static.pepy.tech/badge/dbt-airflow)](https://pepy.tech/project/dbt-airflow)
+## Caixa bank - LLM translator
 
-# dbt-airflow
+# dbt-airflow testing environment
 A Python package that helps Data and Analytics engineers render dbt projects in Apache Airflow DAGs such that
 models, seeds, snapshots and tests are represented by individual Airflow Task.
 
