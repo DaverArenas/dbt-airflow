@@ -1,42 +1,61 @@
-# Caixa bank - LLM translator
+# Caixa Bank - LLM Translator
 
-## dbt-airflow testing environment
+## dbt-airflow Testing Environment
 
-This environment is intended to test 
-A Python package that helps Data and Analytics engineers render dbt projects in Apache Airflow DAGs such that
-models, seeds, snapshots and tests are represented by individual Airflow Task.
+This environment is designed to test a Large Language Model (LLM) that translates Oracle Data Integrator (ODI) pipeline transformations from XML files to dbt, using Apache Airflow to schedule the pipelines and test transformations.
 
-`dbt` is a command-line tool that enables data teams build, maintain and test data models in a scalable fashion. The 
-biggest challenge though is how to embed `dbt` in modern data workflows and infrastructure. dbt CLI is indeed a powerful
-tool, but if used as is, it will create silos in the way an organisation manages its data. Every contributor is able to 
-run `dbt` commands from their local machine (or even a host machine), but how do you know if a model run by another 
-contributor has failed, or succeeded? How can you enable shared visibility over data models, within the team? 
+### Airflow Deployment Using Containers
 
-One way to host dbt projects and orchestrate dbt tasks is via Apache Airflow. In its simplest form, an Airflow DAG
-that will build and test data models will consist of two tasks, one that executes `dbt run` command followed by an 
-Airflow task that executes `dbt test`. 
+Airflow is deployed using Docker containers, leveraging a Docker Compose setup. This approach allows for scalable and reproducible deployment of Airflow with the CeleryExecutor. The docker-compose.yml file in this project contains several service definitions:
 
-<img style="display: block; margin: 0 auto" src="docs/blob/dbt_run_test_dag.png" alt="test">
+- airflow-scheduler - The scheduler monitors all tasks and DAGs, then triggers the task instances once their dependencies are complete.
 
-But what happens when model builds or tests fail? Should we re-run the whole dbt project (that could involve hundreds of 
-different models and/or tests) just to run a single model we've just fixed? This doesn't seem to be a good practice 
-since re-running the whole project  will be time-consuming and expensive. 
+- airflow-webserver - The webserver is available at http://localhost:8080.
 
-A potential solution to this problem is to create individual Airflow tasks for every model, seed, snapshot and test
-within the dbt project. If we were about to do this work manually, we would have to put huge effort that would also be 
-prone to errors. Additionally, it would beat  the purpose of dbt, that among other features, it also automates model 
-dependency management.
+- airflow-worker - The worker that executes the tasks given by the scheduler.
 
-`dbt-airflow` is a package that builds a layer in-between Apache Airflow and dbt, and enables teams to automatically
-render their dbt projects in a granular level such that they have full control to individual dbt resource types. Every
-dbt model, seed, snapshot or test will have its own Airflow Task so that you can perform any action at a task-level. 
+- airflow-triggerer - The triggerer runs an event loop for deferrable tasks.
 
-Here's how the popular Jaffle Shop dbt project will be rendered on Apache Airflow via `dbt-airflow`:
+- airflow-init - The initialization service.
 
-<img style="display: block; margin: 0 auto" src="docs/blob/dbt_jaffle_shop_dag.png" alt="test">
+- postgres - The database.
 
+- redis - The redis - broker that forwards messages from scheduler to worker.
 
-### Features
+Some directories in the container are mounted, which means that their contents are synchronized between your computer and the container.
+
+./dags - you can put your DAG files here.
+
+./logs - contains logs from task execution and scheduler.
+
+./config - you can add custom log parser or add airflow_local_settings.py to configure cluster policy.
+
+./plugins - you can put your custom plugins here.
+
+This file uses a customized Airflow image `(apache/airflow:2.9.2)`. If you need to install a new Python library or system library, you can add it to the custom image.
+
+Initializing E
+### Dockerfile (customized Airflow image)
+
+The Dockerfile is based on the `apache/airflow:2.9.2` image and includes necessary dependencies and configurations. It sets up the environment for running dbt and integrates with other services like PostgreSQL and Redis.
+
+#### Setting the right Airflow user
+On Linux, the quick-start needs to know your host user id and needs to have group id set to 0. Otherwise the files created in dags, logs and plugins will be created with root user ownership. You have to make sure to configure them for the docker-compose:
+```bash
+mkdir -p ./dags ./logs ./plugins ./config
+echo -e "AIRFLOW_UID=$(id -u)" > .env
+```
+
+<img style="display: block; margin: 0 auto" src="images/container-architecture.png" alt="test">
+
+### Main Components
+
+1. **dbt-airflow**:
+
+A Python package that assists Data and Analytics engineers in rendering dbt projects within Apache Airflow Directed Acyclic Graphs (DAGs). This integration ensures that models, seeds, snapshots, and tests are represented by individual Airflow tasks, providing a seamless workflow for managing data transformations and orchestration. `dbt-airflow` is a package that builds a layer in-between Apache Airflow and dbt, and enables teams to automatically render their dbt projects in a granular level such that they have full control to individual dbt resource types. Every dbt model, seed, snapshot or test will have its own Airflow Task so that you can perform any action at a task-level. 
+
+1.1. **Features**:
+
 - Render a `dbt` project as a `TaskGroup` consisting of Airflow Tasks that correspond to dbt models, seeds, snapshots
 and tests
 - Every `model`, `seed` and `snapshot` resource that has at least a single test, will also have a corresponding
@@ -45,121 +64,159 @@ test task as a downstream task
 - Introduce extra tasks within the dbt project tasks and specify any downstream or upstream dependencies
 - Create sub-`TaskGroup`s of dbt Airflow tasks based on your project's folder structure 
 
-## How does it work
+1.2. **How does it work**:
+
 The library essentially builds on top of the metadata generated by `dbt-core` and are stored in 
 the `target/manifest.json` file in your dbt project directory. This means that you first need to compile (or run 
 any other dbt command that creates the `manifest` file) before creating your Airflow DAG. This means the `dbt-airflow` 
 package expects that you have already compiled your dbt project so that an up to date manifest file can then be used
 to render the individual tasks.
 
----
-
-# Installation
+1.3. **Installation**:
 
 The package is available on PyPI and can be installed through `pip`:
 ```bash
 pip install dbt-airflow
 ```
 
-`dbt` needs to connect to your target environment (database, warehouse etc.) and in order to do so, it makes use of 
-different adapters, each dedicated to a different technology (such as Postgres or BigQuery). Therefore, before running
-`dbt-airflow` you also need to ensure that the required adapter(s) are installed in your environment. 
 
-For the full list of available adapters please refer to the official 
-[dbt documentation](https://docs.getdbt.com/docs/available-adapters). 
+2. **dbt**:
+    - dbt (data build tool) is a command-line tool that enables data teams to build, maintain, and test data models in a scalable manner. The primary challenge is integrating `dbt` into modern data workflows and infrastructure. While dbt CLI is a powerful tool, its isolated use can create silos in data management within an organization. Shared visibility and collaborative management of data models are essential for effective data operations.
 
----
-# Usage
+    `dbt` needs to connect to your target environment (database, warehouse etc.) and in order to do so, it makes use of 
+    different adapters, each dedicated to a different technology (such as Postgres or BigQuery). Therefore, before running
+    `dbt-airflow` you also need to ensure that the required adapter(s) are installed in your environment. 
+
+    For the full list of available adapters please refer to the official 
+    [dbt documentation](https://docs.getdbt.com/docs/available-adapters). 
 
 
+3. **Apache Airflow**:
+    - An open-source tool to programmatically author, schedule, and monitor workflows. Airflow’s DAGs (Directed Acyclic Graphs) allow for the scheduling and orchestration of dbt tasks, providing a robust environment for managing and monitoring data pipelines.
 
-### Building an Airflow DAG using `dbt-airflow`
+### dbt Project Structure
 
-```python3
-from datetime import datetime, timedelta
-from pathlib import Path
+A typical dbt project integrated with Airflow will have the following structure:
 
+```plaintext
+example_dbt_project/
+│
+├── models/
+│   ├── example/
+│   │   ├── my_first_dbt_model.sql
+│   │   ├── my_second_dbt_model.sql
+│   │   └── ...
+│   └── ...
+├── snapshots/
+│   ├── example/
+│   │   ├── my_first_snapshot.sql
+│   │   └── ...
+│   └── ...
+├── seeds/
+│   ├── example/
+│   │   ├── my_first_seed.csv
+│   │   └── ...
+│   └── ...
+├── tests/
+│   ├── example/
+│   │   ├── my_first_test.sql
+│   │   └── ...
+│   └── ...
+├── macros/
+│   └── ...
+├── dbt_project.yml
+├── profiles.yml
+```
+
+
+### Main Components of dbt Project
+
+1. **models/**:
+    - Contains SQL files defining the transformations to be applied to the raw data. Each SQL file represents a dbt model.
+
+2. **snapshots/**:
+    - Contains SQL files that capture the state of source data at specific points in time. Useful for tracking slowly changing dimensions.
+
+3. **seeds/**:
+    - Contains CSV files with static data that can be loaded into your database. Useful for reference data or small lookup tables.
+
+4. **tests/**:
+    - Contains SQL files for testing data models. Tests ensure data quality and consistency.
+
+5. **macros/**:
+    - Contains reusable SQL snippets that can be used across multiple models. Macros help in writing DRY (Don't Repeat Yourself) SQL code.
+
+6. **dbt_project.yml**:
+    - The configuration file for the dbt project. It defines the project’s settings, including model paths, source paths, and configurations for different environments.
+
+    ```yaml
+    name: 'my_dbt_project'
+    version: '1.0.0'
+    config-version: 2
+
+    profile: 'my_dbt_profile'
+
+    target-path: "target"
+    clean-targets:
+      - "target"
+      - "dbt_modules"
+
+    models:
+      my_dbt_project:
+        example:
+          materialized: view
+    ```
+
+7. **profiles.yml**:
+    - The configuration file for connection settings to the database. It includes information about different environments (e.g., development, production).
+
+    ```yaml
+    my_dbt_profile:
+      target: dev
+      outputs:
+        dev:
+          type: postgres
+          host: localhost
+          user: my_user
+          password: my_password
+          dbname: my_database
+          schema: public
+    ```
+
+### Airflow DAG Integration
+
+An Airflow DAG that builds and tests data models will typically consist of two primary tasks:
+
+1. **dbt run**:
+    - Executes the `dbt run` command to build the data models.
+
+2. **dbt test**:
+    - Executes the `dbt test` command to validate the data models.
+
+Example DAG structure:
+
+```python
 from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.empty import EmptyOperator
+from airflow.operators.bash_operator import BashOperator
+from datetime import datetime
 
-from dbt_airflow.core.config import DbtAirflowConfig, DbtProjectConfig, DbtProfileConfig
-from dbt_airflow.core.task_group import DbtTaskGroup
-from dbt_airflow.core.task import ExtraTask
-from dbt_airflow.operators.execution import ExecutionOperator
+default_args = {
+    'owner': 'airflow',
+    'start_date': datetime(2023, 1, 1),
+    'retries': 1,
+}
 
+with DAG('dbt_workflow', default_args=default_args, schedule_interval='@daily') as dag:
 
-with DAG(
-    dag_id='test_dag',
-    start_date=datetime(2021, 1, 1),
-    catchup=False,
-    tags=['example'],
-    default_args={
-        'owner': 'airflow',
-        'retries': 1,
-        'retry_delay': timedelta(minutes=2),
-    },
-) as dag:
-    extra_tasks = [
-        ExtraTask(
-            task_id='test_task',
-            operator=PythonOperator,
-            operator_args={
-                'python_callable': lambda: print('Hello world'),
-            },
-            upstream_task_ids={
-                'model.example_dbt_project.int_customers_per_store',
-                'model.example_dbt_project.int_revenue_by_date',
-            },
-        ),
-        ExtraTask(
-            task_id='another_test_task',
-            operator=PythonOperator,
-            operator_args={
-                'python_callable': lambda: print('Hello world 2!'),
-            },
-            upstream_task_ids={
-                'test.example_dbt_project.int_customers_per_store',
-            },
-            downstream_task_ids={
-                'snapshot.example_dbt_project.int_customers_per_store_snapshot',
-            },
-        ),
-        ExtraTask(
-            task_id='test_task_3',
-            operator=PythonOperator,
-            operator_args={
-                'python_callable': lambda: print('Hello world 3!'),
-            },
-            downstream_task_ids={
-                'snapshot.example_dbt_project.int_customers_per_store_snapshot',
-            },
-            upstream_task_ids={
-                'model.example_dbt_project.int_revenue_by_date',
-            },
-        ),
-    ]
-
-    t1 = EmptyOperator(task_id='dummy_1')
-    t2 = EmptyOperator(task_id='dummy_2')
-
-    tg = DbtTaskGroup(
-        group_id='dbt-company',
-        dbt_project_config=DbtProjectConfig(
-            project_path=Path('/opt/airflow/example_dbt_project/'),
-            manifest_path=Path('/opt/airflow/example_dbt_project/target/manifest.json'),
-        ),
-        dbt_profile_config=DbtProfileConfig(
-            profiles_path=Path('/opt/airflow/example_dbt_project/profiles'),
-            target='dev',
-        ),
-        dbt_airflow_config=DbtAirflowConfig(
-            extra_tasks=extra_tasks,
-            execution_operator=ExecutionOperator.BASH,
-            test_tasks_operator_kwargs={'retries': 0},
-        ),
+    dbt_run = BashOperator(
+        task_id='dbt_run',
+        bash_command='cd /path/to/your/dbt_project && dbt run'
     )
 
-    t1 >> tg >> t2
+    dbt_test = BashOperator(
+        task_id='dbt_test',
+        bash_command='cd /path/to/your/dbt_project && dbt test'
+    )
 
+    dbt_run >> dbt_test
 ```
