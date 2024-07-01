@@ -3,3 +3,4 @@
 *.log
 dags/__pycache__/
 logs/
+example_dbt_project/caixa-env/
